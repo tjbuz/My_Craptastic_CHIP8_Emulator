@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <bitset>
 #include <array>
+#include <random>
 
 class CPU
 {
@@ -13,6 +14,13 @@ private:
     std::uint16_t PC{0x200}; // Program counter Start at memory location 512 as per instructions
     std::uint8_t SP{}; // Stack pointer
     std::uint16_t stack[16]{}; // Stack 16 16bit values
+
+    bool screen[64][32]{}; // Dont know SDL2 so implimenting using arrays instead for time being
+    bool keypad[16]{0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,0x9,0xA,0xB,0xC,0xD,0xE,0xF};
+
+    int delay_timer{};
+    int sound_timer{};
+
 public:
     void print_state();
     void load_test_data_ram(std::uint16_t idx, std::uint8_t val);
@@ -115,47 +123,96 @@ void CPU::execute(std::array<std::uint8_t, 4> arr){
         }
         else if (nib4==0x5)
         {
-            /* code */
+            if (gen_reg[nib2] > gen_reg[nib3]){
+                gen_reg[0xF] = 0b1;
+            }
+            else
+            {
+                gen_reg[0xF] = 0b0;
+            }
+            gen_reg[nib2] -= gen_reg[nib3];
+            
         }
         else if (nib4==0x6)
         {
-            /* code */
+            if (gen_reg[nib2] & 0x1 == 0x1){
+                gen_reg[0xF] = 0x1;
+            }
+            gen_reg[nib2] >>= 1;
         }
         else if (nib4==0x7)
         {
-            /* code */
-        }
-        else if (nib4==0x8)
-        {
-            /* code */
-        }
-        else if (nib4==0x9)
-        {
-            /* code */
-        }
-        else if (nib4==0xA)
-        {
-            /* code */
-        }
-        else if (nib4==0xB)
-        {
-            /* code */
-        }
-        else if (nib4==0xC)
-        {
-            /* code */
-        }
-        else if (nib4==0xD)
-        {
-            /* code */
+            if (gen_reg[nib3] > gen_reg[nib2]){
+                gen_reg[0xF] = 0b1;
+            }
+            else
+            {
+                gen_reg[0xF] = 0b0;
+            }
+            gen_reg[nib2] = gen_reg[nib3] - gen_reg[nib2];
         }
         else if (nib4==0xE)
         {
-            /* code */
+            if ((gen_reg[nib2] >> 3) & 0x1 == 0x1){
+                gen_reg[0xF] = 0x1;
+            }
+            gen_reg[nib2] <<= 1;
         }
     }
-    
-    
+    else if (nib1==0x2)
+    {
+        stack[SP] = PC;
+        SP += 1;
+        PC = (nib2 << 8) | (nib3 << 4) | nib4;
+    }
+    else if (nib1==0x0 && nib2==0x0 && nib3==0xE && nib4==0xE)
+    {
+        PC = stack[0];
+        SP -= 1;
+    }
+    else if (nib1==0xB)
+    {
+        PC = ((nib2 << 8) | (nib3 << 4) | nib4) + gen_reg[0];
+    }
+    else if (nib1==0xC)
+    {
+        static std::random_device rd;
+        static std::mt19937 engine(rd());
+        static std::uniform_int_distribution<int> distrib(0, 255);
+
+        std::uint8_t my_rand = static_cast<std::uint8_t>(distrib(engine));
+
+        std::cout<<"random: "<< static_cast<std::bitset<8>>(my_rand);
+        gen_reg[nib2] = ((nib3 << 4) | nib4) & my_rand;
+    }
+    else if (nib1==0xF)
+    {
+        if (nib3==0x0 && nib4==0x7)
+        {
+            gen_reg[nib2] = delay_timer;
+        }
+        else if (nib3==0x0 && nib4==0xA)
+        {
+            /*code*/
+        }
+        else if (nib3==0x1 && nib4==0x5)
+        {
+            delay_timer = gen_reg[nib2];
+        }
+        else if (nib3==0x1 && nib4==0x8)
+        {
+            sound_timer = gen_reg[nib2];
+        }
+        else if (nib3==0x1 && nib4==0xE)
+        {
+            I_reg += gen_reg[nib2];
+        }
+        else if (nib3==0x2 && nib4==0x9)
+        {
+            /*continue implementing instructions*/
+        }
+          
+    }    
     
 }
 
@@ -188,8 +245,8 @@ int main(){
     my_cpu.load_test_data_ram(0x201, 0xFF);
     my_cpu.load_test_data_ram(0x202, 0x63);
     my_cpu.load_test_data_ram(0x203, 0x01);
-    my_cpu.load_test_data_ram(0x204, 0x81);
-    my_cpu.load_test_data_ram(0x205, 0x34);
+    my_cpu.load_test_data_ram(0x204, 0xC1);
+    my_cpu.load_test_data_ram(0x205, 0x11);
 
     opcodee = my_cpu.fetch();
     my_arr = my_cpu.decode(opcodee);
