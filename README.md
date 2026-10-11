@@ -3,6 +3,10 @@ First major project using C++17 to program a CHIP8 emulator
 
 CHIP-8 emulator using Cowgod's technical reference http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#6xkk
 
+Build Command for SDL3:
+g++ main.cpp -I "...\SDL3-3.4.16\x86_64-w64-mingw32\include" -L "...\SDL3-3.4.16\x86_64-w64-mingw32\lib" -lSDL3 -o chip8.exe
+
+
 Part I - Build the CPU;
 -4096 bytes (4 KB) of memory
 -16 general-purpose 8-bit registers, usually called V0 through VF

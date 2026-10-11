@@ -4,6 +4,52 @@
 #include <bitset>
 #include <array>
 #include <random>
+#include <SDL3\SDL.h>
+
+class Display
+{
+private:
+    int width{640};
+    int height{320};
+    SDL_Window * window{nullptr};
+    SDL_Renderer * renderer{nullptr};
+
+    const bool * key_states = SDL_GetKeyboardState(nullptr);
+public:
+    Display(/* args */);
+    std::uint16_t my_key_val();
+};
+
+Display::Display(/* args */){
+    window = SDL_CreateWindow("xX_CrApTaStIc CHIP 8_Xx", width, height, 0);
+    renderer = SDL_CreateRenderer(window, nullptr);
+    bool game_run{true};
+
+    SDL_Event event;
+
+    while (game_run)
+    {
+        while (SDL_PollEvent(&event))
+        {
+            if (event.type == SDL_EVENT_QUIT)
+            {
+                game_run = false;
+            }
+            
+        }
+        
+    }
+    
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+}
+
+std::uint16_t Display::my_key_val(){
+    if (key_states[SDL_SCANCODE_1]) {    
+        return 0x1;
+    }
+}
+
 
 class CPU
 {
@@ -16,7 +62,7 @@ private:
     std::uint16_t stack[16]{}; // Stack 16 16bit values
 
     bool screen[64][32]{}; // Dont know SDL2 so implimenting using arrays instead for time being
-    bool keypad[16]{0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,0x9,0xA,0xB,0xC,0xD,0xE,0xF};
+    //keypad[16]{0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,0x9,0xA,0xB,0xC,0xD,0xE,0xF};
 
     int delay_timer{};
     int sound_timer{};
@@ -193,7 +239,17 @@ void CPU::execute(std::array<std::uint8_t, 4> arr){
         }
         else if (nib3==0x0 && nib4==0xA)
         {
-            /*code*/
+            SDL_Event event;
+
+            bool waiting = true;
+            while (waiting) {
+                SDL_WaitEvent(&event);
+
+                if (event.type == SDL_EVENT_KEY_UP) {
+                    std::cout << "key value: " << Display.my_key_val();
+                    waiting = false;   // continue program
+                }
+            }
         }
         else if (nib3==0x1 && nib4==0x5)
         {
@@ -237,6 +293,10 @@ void CPU::print_state(){
 }
 
 int main(){
+    Display my_disp;
+}
+
+/*int main(){
     CPU my_cpu;
     std::uint16_t opcodee{};
     std::array<std::uint8_t, 4> my_arr{};
@@ -273,4 +333,4 @@ int main(){
     
     std::cout << '\n' << "while loop broken!";
     return 0;
-}
+}*/
