@@ -3,8 +3,13 @@ First major project using C++17 to program a CHIP8 emulator
 
 CHIP-8 emulator using Cowgod's technical reference http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#6xkk
 
-Build Command for SDL3:
+Build Command for SDL3 (WINDOWS 64bit):
 g++ main.cpp -I "...\SDL3-3.4.16\x86_64-w64-mingw32\include" -L "...\SDL3-3.4.16\x86_64-w64-mingw32\lib" -lSDL3 -o chip8.exe
+
+Linux Build command:
+g++ -std=c++17 -Wall -Wextra -pedantic main.cpp -o sdl_test $(pkg-config --cflags --libs sdl3)
+then to run on linux
+GDK_BACKEND=x11 SDL_VIDEODRIVER=x11 ./sdl_test
 
 
 Part I - Build the CPU;
@@ -52,23 +57,40 @@ At this point implement all instructions into CPU checking each (check overflow)
 Easy:
 6xkk    Vx = kk /            
 7xkk    Vx += kk /          
-Annn    I = nnn 
-1nnn    PC = nnn
-3xkk    skip if Vx == kk
-4xkk    skip if Vx != kk
-5xy0    skip if Vx == Vy
-9xy0    skip if Vx != Vy
+Annn    I = nnn /
+1nnn    PC = nnn /
+3xkk    skip if Vx == kk /
+4xkk    skip if Vx != kk /
+5xy0    skip if Vx == Vy /
+9xy0    skip if Vx != Vy /
 register ops:
-8xy0    Vx = Vy
-8xy1    Vx |= Vy
-8xy2    Vx &= Vy
-8xy3    Vx ^= Vy
-8xy4    Vx += Vy
-8xy5    Vx -= Vy
-8xy6    shift Vx right
-8xy7    Vx = Vy - Vx
-8xyE    shift Vx left
+8xy0    Vx = Vy /
+8xy1    Vx |= Vy /
+8xy2    Vx &= Vy /
+8xy3    Vx ^= Vy /
+8xy4    Vx += Vy /
+8xy5    Vx -= Vy /
+8xy6    shift Vx right /
+8xy7    Vx = Vy - Vx /
+8xyE    shift Vx left /
 Then
-2nnn    CALL
-00EE    RET
+2nnn    CALL /
+00EE    RET /
+Bnnn - JP V0, addr /
+Cxkk - RND Vx, byte /
+Fx07 - LD Vx, DT /
+Fx15 - LD DT, Vx /
+Fx18 - LD ST, Vx /
+Fx1E - ADD I, Vx /
+Fx29 - LD F, Vx /
+Fx33 - LD B, Vx /
+Fx55 - LD [I], Vx 
+Fx65 - LD Vx, [I]
+
+learn SDL3 before implementing these instructions
+00E0 - CLS
+Dxyn - DRW
+Ex9E - SKP
+ExA1 - SKNP
+Fx0A - LD Vx, K /
 

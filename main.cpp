@@ -4,7 +4,7 @@
 #include <bitset>
 #include <array>
 #include <random>
-#include <SDL3\SDL.h>
+#include <SDL3/SDL.h>
 
 class Display
 {
@@ -13,41 +13,110 @@ private:
     int height{320};
     SDL_Window * window{nullptr};
     SDL_Renderer * renderer{nullptr};
-
-    const bool * key_states = SDL_GetKeyboardState(nullptr);
+    SDL_Event event;
 public:
     Display(/* args */);
-    std::uint16_t my_key_val();
+    ~Display();
+    int my_key_val();
+    bool pollevents();
 };
 
 Display::Display(/* args */){
+    if (!SDL_Init(SDL_INIT_VIDEO))
+    {
+        std::cerr << "SDL_Init failed: "
+                  << SDL_GetError() << '\n';
+        return;
+    }
+
     window = SDL_CreateWindow("xX_CrApTaStIc CHIP 8_Xx", width, height, 0);
     renderer = SDL_CreateRenderer(window, nullptr);
     bool game_run{true};
-
-    SDL_Event event;
-
-    while (game_run)
-    {
-        while (SDL_PollEvent(&event))
-        {
-            if (event.type == SDL_EVENT_QUIT)
-            {
-                game_run = false;
-            }
-            
-        }
-        
-    }
     
+}
+
+Display::~Display(){
+    SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
 }
 
-std::uint16_t Display::my_key_val(){
-    if (key_states[SDL_SCANCODE_1]) {    
-        return 0x1;
+int Display::my_key_val(){
+    const bool * key_states = SDL_GetKeyboardState(nullptr);
+    if (key_states[SDL_SCANCODE_1]){
+        std::cout << '\n' << "key value: " << 1 << '\n';
+        return 1;
     }
+    if (key_states[SDL_SCANCODE_2]){
+        std::cout << '\n' << "key value: " << 2 << '\n';
+        return 2;
+    }
+    if (key_states[SDL_SCANCODE_3]){
+        std::cout << '\n' << "key value: " << 3 << '\n';
+        return 3;
+    }
+    if (key_states[SDL_SCANCODE_4]){
+        std::cout << '\n' << "key value: " << 12 << '\n';
+        return 12;
+    }
+    if (key_states[SDL_SCANCODE_Q]){
+        std::cout << '\n' << "key value: " << 4 << '\n';
+        return 4;
+    }
+    if (key_states[SDL_SCANCODE_W]){
+        std::cout << '\n' << "key value: " << 5 << '\n';
+        return 5;
+    }
+    if (key_states[SDL_SCANCODE_E]){
+        std::cout << '\n' << "key value: " << 6 << '\n';
+        return 6;
+    }
+    if (key_states[SDL_SCANCODE_R]){
+        std::cout << '\n' << "key value: " << 13 << '\n';
+        return 13;
+    }
+    if (key_states[SDL_SCANCODE_A]){
+        std::cout << '\n' << "key value: " << 7 << '\n';
+        return 7;
+    }
+    if (key_states[SDL_SCANCODE_S]){
+        std::cout << '\n' << "key value: " << 8 << '\n';
+        return 8;
+    }
+    if (key_states[SDL_SCANCODE_D]){
+        std::cout << '\n' << "key value: " << 9 << '\n';
+        return 9;
+    }
+    if (key_states[SDL_SCANCODE_F]){
+        std::cout << '\n' << "key value: " << 14 << '\n';
+        return 14;
+    }
+    if (key_states[SDL_SCANCODE_Z]){
+        std::cout << '\n' << "key value: " << 10 << '\n';
+        return 10;
+    }
+    if (key_states[SDL_SCANCODE_X]){
+        std::cout << '\n' << "key value: " << 0 << '\n';
+        return 0;
+    }
+    if (key_states[SDL_SCANCODE_C]){
+        std::cout << '\n' << "key value: " << 11 << '\n';
+        return 11;
+    }
+    if (key_states[SDL_SCANCODE_V]){
+        std::cout << '\n' << "key value: " << 15 << '\n';
+        return 15;
+    }
+    return -1;
+}
+
+bool Display::pollevents(){
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_EVENT_QUIT) {
+            return false;
+        }
+    }
+    return true;
 }
 
 
@@ -67,14 +136,45 @@ private:
     int delay_timer{};
     int sound_timer{};
 
+    std::uint16_t sprites[16][5] = {
+    0xF0, 0x90, 0x90, 0x90, 0xF0,
+    0x20, 0x60, 0x20, 0x20, 0x70,
+    0xF0, 0x10, 0xF0, 0x80, 0xF0,
+    0xF0, 0x10, 0xF0, 0x10, 0xF0,
+    0x90, 0x90, 0xF0, 0x10, 0x10,
+    0xF0, 0x80, 0xF0, 0x10, 0xF0,
+    0xF0, 0x80, 0xF0, 0x90, 0xF0,
+    0xF0, 0x10, 0x20, 0x40, 0x40,
+    0xF0, 0x90, 0xF0, 0x90, 0xF0,
+    0xF0, 0x90, 0xF0, 0x10, 0xF0,
+    0xF0, 0x90, 0xF0, 0x90, 0x90,
+    0xE0, 0x90, 0xE0, 0x90, 0xE0,
+    0xF0, 0x80, 0x80, 0x80, 0xF0,
+    0xE0, 0x90, 0x90, 0x90, 0xE0,
+    0xF0, 0x80, 0xF0, 0x80, 0xF0,
+    0xF0, 0x80, 0xF0, 0x80, 0x80
+    };
+
 public:
+    CPU();
+    bool wait_key = false;
+    std::uint8_t wait_reg{};
     void print_state();
     void load_test_data_ram(std::uint16_t idx, std::uint8_t val);
     std::uint16_t fetch();
     std::array<std::uint8_t, 4> decode(std::uint16_t op_code);
     void execute(std::array<std::uint8_t, 4> arr);
     std::uint16_t get_PC();
+    void update_gen_reg(int regnum, std::uint8_t reg_val);
 };
+
+CPU::CPU(){
+    for(int i = 0; i < 16; i++){
+        for (int j = 0; j < 5; j++){
+            ram[(0x050)+(i*5)+j] = sprites[i][j];
+        }  
+    }
+}
 
 std::uint16_t CPU::fetch(){
     std::uint16_t opcode{};
@@ -239,17 +339,9 @@ void CPU::execute(std::array<std::uint8_t, 4> arr){
         }
         else if (nib3==0x0 && nib4==0xA)
         {
-            SDL_Event event;
-
-            bool waiting = true;
-            while (waiting) {
-                SDL_WaitEvent(&event);
-
-                if (event.type == SDL_EVENT_KEY_UP) {
-                    std::cout << "key value: " << Display.my_key_val();
-                    waiting = false;   // continue program
-                }
-            }
+            //I want to wait while the user presses a key and then continue executing
+            wait_key = true;
+            wait_reg = nib2;
         }
         else if (nib3==0x1 && nib4==0x5)
         {
@@ -265,7 +357,23 @@ void CPU::execute(std::array<std::uint8_t, 4> arr){
         }
         else if (nib3==0x2 && nib4==0x9)
         {
-            /*continue implementing instructions*/
+            I_reg = 0x050 + (gen_reg[nib2]*5);
+        }
+        else if (nib3==0x3 && nib4==0x3)
+        {
+            uint16_t temp = gen_reg[nib2];
+
+            ram[I_reg] = temp/100;
+            ram[I_reg+1] = (temp/10)%10;
+            ram[I_reg+2] = temp%10;
+
+            std::cout << "hundreds: " << temp/100 << '\n';
+            std::cout << "Tens: " << (temp/10)%10 << '\n';
+            std::cout << "ones: " << temp%10 << '\n'; 
+        }
+        else if (nib3==0x5 && nib4==0x5)
+        {
+            
         }
           
     }    
@@ -275,6 +383,10 @@ void CPU::execute(std::array<std::uint8_t, 4> arr){
 std::uint16_t CPU::get_PC()
 {
     return PC;
+}
+
+void CPU::update_gen_reg(int regnum, std::uint8_t reg_val){
+    gen_reg[regnum] = reg_val;
 }
 
 void CPU::load_test_data_ram(std::uint16_t idx, std::uint8_t val){
@@ -292,21 +404,53 @@ void CPU::print_state(){
     std::cout << '\n';
 }
 
-int main(){
-    Display my_disp;
-}
-
 /*int main(){
+
+    Display my_display;
     CPU my_cpu;
     std::uint16_t opcodee{};
     std::array<std::uint8_t, 4> my_arr{};
 
-    my_cpu.load_test_data_ram(0x200, 0x61);
-    my_cpu.load_test_data_ram(0x201, 0xFF);
-    my_cpu.load_test_data_ram(0x202, 0x63);
-    my_cpu.load_test_data_ram(0x203, 0x01);
-    my_cpu.load_test_data_ram(0x204, 0xC1);
-    my_cpu.load_test_data_ram(0x205, 0x11);
+    my_cpu.load_test_data_ram(0x200, 0xF6);
+    my_cpu.load_test_data_ram(0x201, 0x0A);
+
+    bool running = true;
+    while (running){
+        running = my_display.pollevents();
+
+        int the_key = my_display.my_key_val();
+
+        std::cout << '\n' << "wait_reg: " << my_cpu.wait_reg << '\n';
+
+        if (my_cpu.wait_key == true)
+        {
+            if (the_key != -1)
+            {
+                my_cpu.update_gen_reg(static_cast<int>(my_cpu.wait_reg), the_key);
+                my_cpu.wait_key = false;
+            }
+
+        }
+        else{
+            opcodee = my_cpu.fetch();
+            my_arr = my_cpu.decode(opcodee);
+            my_cpu.execute(my_arr);
+        }
+        
+        my_cpu.print_state();
+        SDL_Delay(1000);
+    }
+}*/
+
+int main(){
+    CPU my_cpu;
+    std::uint16_t opcodee{};
+    std::array<std::uint8_t, 4> my_arr{};
+
+    my_cpu.load_test_data_ram(0x200, 0x63);
+    my_cpu.load_test_data_ram(0x201, 0x0D); 
+    my_cpu.load_test_data_ram(0x202, 0xF3);
+    my_cpu.load_test_data_ram(0x203, 0x33);
 
     opcodee = my_cpu.fetch();
     my_arr = my_cpu.decode(opcodee);
@@ -316,11 +460,6 @@ int main(){
     my_arr = my_cpu.decode(opcodee);
     my_cpu.execute(my_arr);
     my_cpu.print_state();
-    opcodee = my_cpu.fetch();
-    my_arr = my_cpu.decode(opcodee);
-    my_cpu.execute(my_arr);
-    my_cpu.print_state();
-    
 
     // opcodee = my_cpu.fetch();
     // while (opcodee != 0x0)
@@ -331,6 +470,5 @@ int main(){
     //     opcodee = my_cpu.fetch();
     // }
     
-    std::cout << '\n' << "while loop broken!";
     return 0;
-}*/
+}
