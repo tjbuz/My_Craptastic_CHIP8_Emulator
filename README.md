@@ -84,11 +84,11 @@ Fx18 - LD ST, Vx /
 Fx1E - ADD I, Vx /
 Fx29 - LD F, Vx /
 Fx33 - LD B, Vx /
-Fx55 - LD [I], Vx 
-Fx65 - LD Vx, [I]
+Fx55 - LD [I], Vx /
+Fx65 - LD Vx, [I] /
 
 learn SDL3 before implementing these instructions
-00E0 - CLS
+00E0 - CLS /
 Dxyn - DRW
 Ex9E - SKP
 ExA1 - SKNP

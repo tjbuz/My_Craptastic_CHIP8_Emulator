@@ -19,7 +19,32 @@ public:
     ~Display();
     int my_key_val();
     bool pollevents();
+    void clear();
+    void draw(int vx, int vy, std::vector<std::array<int, 8>> vect);
+    int screen[32][64]{0};
 };
+
+void Display::clear(){
+    SDL_SetRenderDrawColor(renderer, 10, 10, 80, 255);
+    SDL_RenderClear(renderer);
+}
+
+void Display::draw(int vx, int vy, std::vector<std::array<int, 8>> vect){
+
+    for(int i = 0; i < vect.size(); i++){
+        for(int j = 0; j < 8; j++){
+            int vxx = (vx+j)%64;
+            int vyy = (vy+i)%32;
+            if(vect[i][j] ^= screen[vyy][vxx]){
+                 
+                SDL_FRect red_apple{10*(vxx), 10*(vyy), 10, 10};
+                SDL_SetRenderDrawColor(renderer, 255, 225, 0, 255);
+                SDL_RenderFillRect(renderer, &red_apple);
+            }
+        }
+    }
+    SDL_RenderPresent(renderer);
+}
 
 Display::Display(/* args */){
     if (!SDL_Init(SDL_INIT_VIDEO))
@@ -158,6 +183,11 @@ private:
 public:
     CPU();
     bool wait_key = false;
+    bool clear_display = false;
+    bool call_draw = false;
+    std::vector<std::array<int, 8>> bits;
+    int draw_reg_x{};
+    int draw_reg_y{};
     std::uint8_t wait_reg{};
     void print_state();
     void load_test_data_ram(std::uint16_t idx, std::uint8_t val);
@@ -373,11 +403,36 @@ void CPU::execute(std::array<std::uint8_t, 4> arr){
         }
         else if (nib3==0x5 && nib4==0x5)
         {
-            
+            for(int i = 0; i <= static_cast<int>(nib2); i++){
+                ram[I_reg + i] = gen_reg[i];
+            }
         }
-          
+        else if (nib3==0x6 && nib4==0x5)
+        {
+            for(int i = 0; i <= static_cast<int>(nib2); i++){
+                gen_reg[i] = ram[I_reg + i];
+            }
+        }    
     }    
-    
+    else if (nib1==0x0 && nib2==0x0 && nib3==0xE && nib4==0x0)
+    {
+        clear_display = true;
+    }
+    else if (nib1==0xD)
+    {
+        bits.resize(static_cast<int>(nib4));
+        std::cout << '\n' << "Sprite height: " << static_cast<int>(nib4) << '\n';
+        for(int i = 0; i < static_cast<int>(nib4); i++){
+            for(int idx = 7; idx >= 0; idx--){
+                bits[i][7-idx] = (ram[I_reg+i] >> idx) & 0x01;
+                std::cout << '\n' << "bits n bobs:" << static_cast<int>(bits[i][7-idx]) << '\n';
+            }
+        }
+
+        draw_reg_x = static_cast<int>(gen_reg[nib2]);
+        draw_reg_y = static_cast<int>(gen_reg[nib3]);
+        call_draw = true;
+    }
 }
 
 std::uint16_t CPU::get_PC()
@@ -403,6 +458,90 @@ void CPU::print_state(){
     }
     std::cout << '\n';
 }
+
+int main(){
+
+    Display my_display;
+    CPU my_cpu;
+    std::uint16_t opcodee{};
+    std::array<std::uint8_t, 4> my_arr{};
+    my_cpu.load_test_data_ram(0xF11, 0x81);
+    my_cpu.load_test_data_ram(0xF12, 0xFF);
+    my_cpu.load_test_data_ram(0xF13, 0xc3);
+
+    my_cpu.load_test_data_ram(0x200, 0x62);
+    my_cpu.load_test_data_ram(0x201, 0x3C);
+    my_cpu.load_test_data_ram(0x202, 0x63);
+    my_cpu.load_test_data_ram(0x203, 0x1e);
+
+    my_cpu.load_test_data_ram(0x204, 0xAF);
+    my_cpu.load_test_data_ram(0x205, 0x11);
+
+    my_cpu.load_test_data_ram(0x206, 0x00);
+    my_cpu.load_test_data_ram(0x207, 0xE0);
+    my_cpu.load_test_data_ram(0x208, 0xD2);
+    my_cpu.load_test_data_ram(0x209, 0x33);
+
+    bool running = true;
+    while (running){
+        running = my_display.pollevents();
+
+        if (my_cpu.clear_display == true)
+        {
+            my_display.clear();
+            my_cpu.clear_display = false;
+        }
+        else{
+            opcodee = my_cpu.fetch();
+            my_arr = my_cpu.decode(opcodee);
+            my_cpu.execute(my_arr);
+        }
+
+        if (my_cpu.call_draw == true)
+        {
+            my_display.draw(my_cpu.draw_reg_x, my_cpu.draw_reg_y, my_cpu.bits);
+            my_cpu.call_draw = false;
+        }
+        else{
+            opcodee = my_cpu.fetch();
+            my_arr = my_cpu.decode(opcodee);
+            my_cpu.execute(my_arr);
+        }
+        
+        my_cpu.print_state();
+        SDL_Delay(1000);
+    }
+}
+
+/*int main(){
+
+    Display my_display;
+    CPU my_cpu;
+    std::uint16_t opcodee{};
+    std::array<std::uint8_t, 4> my_arr{};
+
+    my_cpu.load_test_data_ram(0x200, 0x00);
+    my_cpu.load_test_data_ram(0x201, 0xE0);
+
+    bool running = true;
+    while (running){
+        running = my_display.pollevents();
+
+        if (my_cpu.clear_display == true)
+        {
+            my_display.clear();
+            my_cpu.clear_display = false;
+        }
+        else{
+            opcodee = my_cpu.fetch();
+            my_arr = my_cpu.decode(opcodee);
+            my_cpu.execute(my_arr);
+        }
+        
+        //my_cpu.print_state();
+        SDL_Delay(1000);
+    }
+}*/
 
 /*int main(){
 
@@ -442,7 +581,7 @@ void CPU::print_state(){
     }
 }*/
 
-int main(){
+/*int main(){
     CPU my_cpu;
     std::uint16_t opcodee{};
     std::array<std::uint8_t, 4> my_arr{};
@@ -450,7 +589,7 @@ int main(){
     my_cpu.load_test_data_ram(0x200, 0x63);
     my_cpu.load_test_data_ram(0x201, 0x0D); 
     my_cpu.load_test_data_ram(0x202, 0xF3);
-    my_cpu.load_test_data_ram(0x203, 0x33);
+    my_cpu.load_test_data_ram(0x203, 0x55);
 
     opcodee = my_cpu.fetch();
     my_arr = my_cpu.decode(opcodee);
@@ -471,4 +610,4 @@ int main(){
     // }
     
     return 0;
-}
+}*/
