@@ -21,29 +21,65 @@ public:
     bool pollevents();
     void clear();
     void draw(int vx, int vy, std::vector<std::array<int, 8>> vect);
+    void render_screen();
     int screen[32][64]{0};
+    bool set_vf = false;
 };
 
-void Display::clear(){
+void Display::render_screen(){
     SDL_SetRenderDrawColor(renderer, 10, 10, 80, 255);
     SDL_RenderClear(renderer);
+
+    for(int i = 0; i < 64; i++){
+        for(int j = 0; j < 32; j++){
+
+            if(screen[j][i] == 1){
+                SDL_FRect red_apple{10*(i), 10*(j), 10, 10};
+                SDL_SetRenderDrawColor(renderer, 255, 225, 0, 255);
+                SDL_RenderFillRect(renderer, &red_apple);
+            } 
+            else if (screen[j][i] == 0){
+                SDL_FRect bg{10*(i), 10*(j), 10, 10};
+                SDL_SetRenderDrawColor(renderer, 10, 10, 80, 255);
+                SDL_RenderFillRect(renderer, &bg);
+            }
+            else{
+                std::cerr << "ERROR: ";
+            }
+        }
+    }
+    SDL_RenderPresent(renderer);
+
+}
+
+void Display::clear(){
+    for (int y = 0; y < 32; y++) {
+        for (int x = 0; x < 64; x++) {
+            screen[y][x] = 0;
+        }
+    }
 }
 
 void Display::draw(int vx, int vy, std::vector<std::array<int, 8>> vect){
+
+    int temp[32][64]{};
+    for (int y = 0; y < 32; y++) {
+        for (int x = 0; x < 64; x++) {
+            temp[y][x] = screen[y][x];
+        }
+    }
 
     for(int i = 0; i < vect.size(); i++){
         for(int j = 0; j < 8; j++){
             int vxx = (vx+j)%64;
             int vyy = (vy+i)%32;
-            if(vect[i][j] ^= screen[vyy][vxx]){
-                 
-                SDL_FRect red_apple{10*(vxx), 10*(vyy), 10, 10};
-                SDL_SetRenderDrawColor(renderer, 255, 225, 0, 255);
-                SDL_RenderFillRect(renderer, &red_apple);
+
+            if (temp[vyy][vxx] == 1 && vect[i][j] == 1){
+                set_vf = true;
             }
+            screen[vyy][vxx] = temp[vyy][vxx] ^ vect[i][j];
         }
     }
-    SDL_RenderPresent(renderer);
 }
 
 Display::Display(/* args */){
@@ -154,9 +190,6 @@ private:
     std::uint16_t PC{0x200}; // Program counter Start at memory location 512 as per instructions
     std::uint8_t SP{}; // Stack pointer
     std::uint16_t stack[16]{}; // Stack 16 16bit values
-
-    bool screen[64][32]{}; // Dont know SDL2 so implimenting using arrays instead for time being
-    //keypad[16]{0x0,0x1,0x2,0x3,0x4,0x5,0x6,0x7,0x8,0x9,0xA,0xB,0xC,0xD,0xE,0xF};
 
     int delay_timer{};
     int sound_timer{};
@@ -461,13 +494,14 @@ void CPU::print_state(){
 
 int main(){
 
-    Display my_display;
     CPU my_cpu;
+    Display my_display;
     std::uint16_t opcodee{};
     std::array<std::uint8_t, 4> my_arr{};
     my_cpu.load_test_data_ram(0xF11, 0x81);
     my_cpu.load_test_data_ram(0xF12, 0xFF);
     my_cpu.load_test_data_ram(0xF13, 0xc3);
+    my_cpu.load_test_data_ram(0xFF1, 0xFF);
 
     my_cpu.load_test_data_ram(0x200, 0x62);
     my_cpu.load_test_data_ram(0x201, 0x3C);
@@ -482,19 +516,24 @@ int main(){
     my_cpu.load_test_data_ram(0x208, 0xD2);
     my_cpu.load_test_data_ram(0x209, 0x33);
 
+    my_cpu.load_test_data_ram(0x20a, 0xAF);
+    my_cpu.load_test_data_ram(0x20b, 0xF1);
+    my_cpu.load_test_data_ram(0x20c, 0xD2);
+    my_cpu.load_test_data_ram(0x20d, 0x31);
+
     bool running = true;
     while (running){
         running = my_display.pollevents();
+        
+        opcodee = my_cpu.fetch();
+        my_arr = my_cpu.decode(opcodee);
+        my_cpu.execute(my_arr);
+        my_display.render_screen();
 
         if (my_cpu.clear_display == true)
         {
             my_display.clear();
             my_cpu.clear_display = false;
-        }
-        else{
-            opcodee = my_cpu.fetch();
-            my_arr = my_cpu.decode(opcodee);
-            my_cpu.execute(my_arr);
         }
 
         if (my_cpu.call_draw == true)
@@ -502,12 +541,14 @@ int main(){
             my_display.draw(my_cpu.draw_reg_x, my_cpu.draw_reg_y, my_cpu.bits);
             my_cpu.call_draw = false;
         }
-        else{
-            opcodee = my_cpu.fetch();
-            my_arr = my_cpu.decode(opcodee);
-            my_cpu.execute(my_arr);
+        if (my_display.set_vf == true)
+        {
+            my_cpu.update_gen_reg(15, 1);
+            my_display.set_vf = false;
+        } else {
+            my_cpu.update_gen_reg(15, 0);
         }
-        
+
         my_cpu.print_state();
         SDL_Delay(1000);
     }
